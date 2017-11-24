@@ -9,8 +9,18 @@ chip8.init
 
 sum = 0xA2 << 8 | 0xF0
 
-chip8.decode sum
-puts ''
-chip8.decode 0x00E0
-puts ''
-chip8.decode 0x00EE
+# chip8.decode sum
+# puts ''
+# chip8.decode 0x00E0
+# puts ''
+# chip8.decode 0x2123
+
+# chip8.decode 0x00EE
+# puts ''
+chip8.v[2] = 0x2
+chip8.v[1] = 0x1
+puts chip8.v[1].to_s 16
+chip8.decode 0x8120
+puts chip8.v[1].to_s 16
+# puts ''
+# chip8.decode 0x6122
