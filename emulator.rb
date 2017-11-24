@@ -17,10 +17,18 @@ sum = 0xA2 << 8 | 0xF0
 
 # chip8.decode 0x00EE
 # puts ''
-chip8.v[2] = 0x2
-chip8.v[1] = 0x1
-puts chip8.v[1].to_s 16
-chip8.decode 0x8120
-puts chip8.v[1].to_s 16
+# chip8.v[2] = 0x2
+# chip8.v[1] = 0x1
+# puts chip8.v[1].to_s 16
+# chip8.decode 0x8120
+# puts chip8.v[1].to_s 16
 # puts ''
 # chip8.decode 0x6122
+
+chip8.memory.unshift(0x6122)
+chip8.memory.unshift(0x8120)
+puts chip8.v[1].to_s 16
+while true
+  chip8.tick
+  puts chip8.v[1].to_s 16
+end

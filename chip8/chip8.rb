@@ -1,7 +1,7 @@
 module Chip8
   class Chip8
 
-    attr_reader :instructionset, :pc, :ir, :sp, :opcode, :v
+    attr_reader :instructionset, :pc, :ir, :sp, :opcode, :v, :memory
 
     def initialize
       # noinspection RubyInstanceVariableNamingConvention
@@ -9,13 +9,16 @@ module Chip8
       @stack = []
       @delay_timer = 0
       @sound_time = 0
-      @memory = []
+      @memory = [0]*64*64
       @instructionset = {
           0x000E => Opcode.new(nil, nil, nil, -> opcode {
             puts 'IMPLEMENT RETURN FROM SUBROUTINE'
           }),
           0x0000 => Opcode.new('0x00E0', :Display, 'Clear display', -> opcode {
             puts 'IMPLEMENT CLEAR DISPLAY'
+          }),
+          0x6000 => Opcode.new('0x6XNN', :Const, '	Sets VX to NN.', -> opcode {
+            @v[(opcode & 0x0F00) >> 8] = ((opcode & 0x00F0) >> 4)
           }),
           0xA000 => Opcode.new('0xANNN', :MEM, 'Sets index register to the address NNN.', -> opcode {
             puts "Received 0x#{opcode.to_s 16}, setting ir to 0x#{(opcode & 0x0FFF).to_s 16}"
@@ -29,15 +32,19 @@ module Chip8
           }),
           0x8000 => Opcode.new('0x8XY0', :Assing, 'Sets VX to the value of VY.', -> opcode {
             @v[(opcode & 0x0F00) >> 8] = @v[(opcode & 0x00F0) >> 4]
+            @pc += 2
           }),
           0x8001 => Opcode.new('0x8XY1', :BitOp, 'Sets VX to VX or VY.', -> opcode {
             @v[(opcode & 0x0F00) >> 8] = @v[(opcode & 0x00F0) >> 4] | @v[(opcode & 0x0F00) >> 8]
+            @pc += 2
           }),
           0x8002 => Opcode.new('0x8XY2', :BitOp, 'Sets VX to VX and VY.', -> opcode {
             @v[(opcode & 0x0F00) >> 8] = @v[(opcode & 0x00F0) >> 4] & @v[(opcode & 0x0F00) >> 8]
+            @pc += 2
           }),
           0x8003 => Opcode.new('0x8XY3', :BitOp, 'Sets VX to VX xor VY.', -> opcode {
             @v[(opcode & 0x0F00) >> 8] = @v[(opcode & 0x00F0) >> 4] ^ @v[(opcode & 0x0F00) >> 8]
+            @pc += 2
           }),
           0x8004 => Opcode.new('0x8XY4', :Math, 'Adds VY to VX. VF is set to 1 when there\'s a carry, and to 0 when there isn\'t.', -> opcode {
             if @v[(opcode & 0x00F0) >> 4] > (0xFF - @v[(opcode & 0x0F00) >> 8])
@@ -65,13 +72,13 @@ module Chip8
         when 0x0000
           op2 = opcode & 0xF00F
           puts "Starts with 0, looking further #{format_op op2}"
-          execute op2, opcode
+          get_opcode op2, opcode
         when 0x8000
           op2 = opcode & 0xF00F
           puts "Starts with 8, looking further #{format_op op2}"
-          execute op2, opcode
+          get_opcode op2, opcode
         else
-          execute op, opcode
+          get_opcode op, opcode
       end
       puts "Decoded #{format_op opcode}"
     end
@@ -85,12 +92,18 @@ module Chip8
 
     def tick
       # fetch next opcode
-      # decode opcode
-      # execute opcode
 
+      op1 = @memory[@pc]
+      op2 = @memory[@pc + 1]
+      hex_opcode = op1 << 8 | op2
+
+      # decode opcode
+      opcode = decode hex_opcode
+
+      # execute opcode
+      opcode.fun.call hex_opcode
 
       # update timers
-
       if @delay_timer > 0
         @delay_timer -= 1
       end
@@ -107,9 +120,9 @@ module Chip8
       puts d
     end
 
-    def execute(key, opcode)
+    def get_opcode(key, opcode)
       if @instructionset.key? key
-        @instructionset[key].fun.call(opcode)
+        @instructionset[key]
       else
         puts "Unknown opcode #{format_op opcode}"
       end
